@@ -441,56 +441,26 @@ body {
 /* ===== AUDIO PLAYER FIXED BOTTOM ===== */
 .audio-bar-fixed {
   position: fixed;
-  bottom: 0; left: 50%;
+  bottom: 18px; left: 50%;
   transform: translateX(-50%);
-  width: min(480px, 100vw);
-  display: flex; align-items: center; gap: 14px;
-  padding: 10px 20px 14px;
-  background: rgba(5,0,18,0.88);
-  border-top: 1px solid rgba(255,45,120,.3);
-  backdrop-filter: blur(18px);
   z-index: 9999;
-  box-shadow: 0 -6px 30px rgba(255,45,120,.12);
 }
 .audio-btn {
-  width:40px; height:40px; border-radius:50%;
-  background:linear-gradient(135deg, var(--pink), var(--purple));
-  border:none; cursor:pointer;
+  width:44px; height:44px; border-radius:50%;
+  background: rgba(5,0,18,0.82);
+  border: 1px solid rgba(255,45,120,.45);
+  cursor:pointer;
   display:flex; align-items:center; justify-content:center;
   flex-shrink:0;
-  box-shadow: 0 0 14px rgba(255,45,120,.4);
-  transition: transform .2s, box-shadow .2s;
+  box-shadow: 0 0 18px rgba(255,45,120,.35), 0 4px 20px rgba(0,0,0,.5);
+  backdrop-filter: blur(14px);
+  transition: transform .2s, box-shadow .2s, border-color .2s;
 }
-.audio-btn:hover { transform:scale(1.1); box-shadow:0 0 22px rgba(255,45,120,.6); }
-.audio-btn:active { transform:scale(0.95); }
-.audio-btn svg { width:14px; height:14px; fill:white; }
-.audio-info { flex:1; overflow:hidden; }
-.audio-track {
-  font-size:11px; font-weight:800; color:rgba(255,255,255,.75);
-  letter-spacing:1px; white-space:nowrap;
-  overflow:hidden; text-overflow:ellipsis;
-}
-.audio-eq {
-  display:flex; align-items:flex-end; gap:2px; height:14px; margin-top:3px;
-}
-.audio-eq span {
-  width:3px; border-radius:2px;
-  background:var(--pink);
-  box-shadow: 0 0 4px var(--pink);
-  animation: eqBar 0.6s ease-in-out infinite alternate;
-}
-.audio-eq span:nth-child(1){ height:60%; animation-delay:0s; }
-.audio-eq span:nth-child(2){ height:100%; animation-delay:.1s; background:var(--purple); box-shadow:0 0 4px var(--purple); }
-.audio-eq span:nth-child(3){ height:40%; animation-delay:.2s; background:var(--cyan); box-shadow:0 0 4px var(--cyan); }
-.audio-eq span:nth-child(4){ height:80%; animation-delay:.05s; }
-.audio-eq span:nth-child(5){ height:50%; animation-delay:.15s; background:var(--yellow); box-shadow:0 0 4px var(--yellow); }
-@keyframes eqBar {
-  from { transform: scaleY(0.3); }
-  to   { transform: scaleY(1); }
-}
-.audio-eq.paused span { animation-play-state: paused; }
+.audio-btn:hover { transform:scale(1.12); box-shadow:0 0 28px rgba(255,45,120,.6); }
+.audio-btn:active { transform:scale(0.94); }
+.audio-btn svg { width:18px; height:18px; fill:rgba(255,255,255,.85); }
 /* padding bottom para que el footer no quede tapado */
-body { padding-bottom: 64px; }
+body { padding-bottom: 80px; }
 
 
 /* ===== BURST ===== */
@@ -840,78 +810,64 @@ function spawnBurst(x, y){
 }
 
 /* ============================================
-   FIXED BOTTOM AUDIO BAR — inject into DOM
+   FIXED BOTTOM MUTE BUTTON — inject into DOM
 ============================================ */
+const ICON_SOUND = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/>
+</svg>`;
+const ICON_MUTE = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>
+</svg>`;
+
 (function(){
   const bar = document.createElement('div');
   bar.className = 'audio-bar-fixed';
   bar.id = 'audioBar';
-  bar.innerHTML = `
-    <button class="audio-btn" id="audioBtn" onclick="toggleMusic()">
-      <svg id="playIcon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-    </button>
-    <div class="audio-info">
-      <div class="audio-track">🎧 Feliz Cumpleaños — Markoz Remix</div>
-      <div class="audio-eq paused" id="audioEq">
-        <span></span><span></span><span></span><span></span><span></span>
-      </div>
-    </div>
-  `;
+  bar.innerHTML = `<button class="audio-btn" id="audioBtn" onclick="toggleMute()" title="Silenciar / Activar música"></button>`;
   document.body.appendChild(bar);
+  document.getElementById('audioBtn').innerHTML = ICON_SOUND;
 })();
 
 /* ============================================
-   REAL MP3 PLAYER
+   REAL MP3 PLAYER — autoplay con muted trick
 ============================================ */
 const bgAudio = new Audio('Feliz_Cumpleaños_versión_Electrónica_-_Markoz_Remix.mp3');
 bgAudio.loop   = true;
-bgAudio.volume = 0.75;
-let isPlaying  = false;
+bgAudio.volume = 0.8;
+bgAudio.muted  = true; // muted = autoplay siempre funciona en browsers
 
-function setPlayingUI(playing) {
-  isPlaying = playing;
-  const icon = document.getElementById('playIcon');
-  const eq   = document.getElementById('audioEq');
-  if (icon) icon.innerHTML = playing
-    ? '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>'
-    : '<path d="M8 5v14l11-7z"/>';
-  if (eq) eq.classList.toggle('paused', !playing);
+let isMuted = false;
+
+function setMuteUI(muted) {
+  isMuted = muted;
+  const btn = document.getElementById('audioBtn');
+  if (btn) btn.innerHTML = muted ? ICON_MUTE : ICON_SOUND;
+  // borde rojo cuando muted
+  if (btn) btn.style.borderColor = muted ? 'rgba(255,255,255,.2)' : 'rgba(255,45,120,.45)';
 }
 
-function startMusic() {
-  bgAudio.play().then(() => setPlayingUI(true)).catch(() => {});
+function toggleMute() {
+  isMuted = !isMuted;
+  bgAudio.muted = isMuted;
+  setMuteUI(isMuted);
 }
 
-function stopMusic() {
-  bgAudio.pause();
-  setPlayingUI(false);
+// Arrancar en autoplay muted, luego desmutear al primer gesto
+function tryUnmute() {
+  if (!isMuted) return;
+  bgAudio.muted = false;
+  isMuted = false;
+  setMuteUI(false);
+  document.removeEventListener('click',      tryUnmute);
+  document.removeEventListener('touchstart', tryUnmute);
 }
 
-function toggleMusic() {
-  isPlaying ? stopMusic() : startMusic();
-}
+// Autoplay inmediato (muted = siempre permitido)
+bgAudio.play().catch(() => {});
 
-// Autoplay on first user gesture
-let autoStarted = false;
-function tryAutoplay() {
-  if (autoStarted) return;
-  autoStarted = true;
-  startMusic();
-  document.removeEventListener('click',      tryAutoplay);
-  document.removeEventListener('touchstart', tryAutoplay);
-}
-
-document.addEventListener('click',      tryAutoplay, { once: true });
-document.addEventListener('touchstart', tryAutoplay, { once: true });
-
-// Try immediate autoplay on load
-window.addEventListener('load', () => {
-  setTimeout(() => {
-    bgAudio.play()
-      .then(() => { setPlayingUI(true); autoStarted = true; })
-      .catch(() => {}); // browser blocked, waits for gesture
-  }, 600);
-});
+// Desmutear al primer toque/click del usuario
+document.addEventListener('click',      tryUnmute, { once: true });
+document.addEventListener('touchstart', tryUnmute, { once: true });
 
 // Burst on click
 document.getElementById('inv').addEventListener('click', e => {
