@@ -829,20 +829,19 @@ const ICON_MUTE = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
 })();
 
 /* ============================================
-   REAL MP3 PLAYER — autoplay con muted trick
+   REAL MP3 PLAYER
 ============================================ */
 const bgAudio = new Audio('Feliz_Cumpleaños_versión_Electrónica_-_Markoz_Remix.mp3');
 bgAudio.loop   = true;
 bgAudio.volume = 0.8;
-bgAudio.muted  = true; // muted = autoplay siempre funciona en browsers
 
 let isMuted = false;
+let audioUnlocked = false;
 
 function setMuteUI(muted) {
   isMuted = muted;
   const btn = document.getElementById('audioBtn');
   if (btn) btn.innerHTML = muted ? ICON_MUTE : ICON_SOUND;
-  // borde rojo cuando muted
   if (btn) btn.style.borderColor = muted ? 'rgba(255,255,255,.2)' : 'rgba(255,45,120,.45)';
 }
 
@@ -852,25 +851,32 @@ function toggleMute() {
   setMuteUI(isMuted);
 }
 
-// Arrancar en autoplay muted, luego desmutear al primer gesto
-function tryUnmute() {
-  if (!isMuted) return;
-  bgAudio.muted = false;
-  isMuted = false;
-  setMuteUI(false);
-  document.removeEventListener('click',      tryUnmute);
-  document.removeEventListener('touchstart', tryUnmute);
+function unlockAndPlay() {
+  if (audioUnlocked) return;
+  audioUnlocked = true;
+  bgAudio.play().catch(() => {});
+  document.removeEventListener('click',      unlockAndPlay);
+  document.removeEventListener('touchstart', unlockAndPlay);
+  document.removeEventListener('touchend',   unlockAndPlay);
+  document.removeEventListener('keydown',    unlockAndPlay);
 }
 
-// Autoplay inmediato (muted = siempre permitido)
-bgAudio.play().catch(() => {});
+// Intentar autoplay directo al cargar
+window.addEventListener('load', () => {
+  bgAudio.play()
+    .then(() => { audioUnlocked = true; })
+    .catch(() => {
+      // Browser bloqueó — esperar primer gesto
+      document.addEventListener('click',      unlockAndPlay, { once: true });
+      document.addEventListener('touchstart', unlockAndPlay, { once: true });
+      document.addEventListener('touchend',   unlockAndPlay, { once: true });
+      document.addEventListener('keydown',    unlockAndPlay, { once: true });
+    });
+});
 
-// Desmutear al primer toque/click del usuario
-document.addEventListener('click',      tryUnmute, { once: true });
-document.addEventListener('touchstart', tryUnmute, { once: true });
-
-// Burst on click
+// Burst on click (también desbloquea audio en primer toque)
 document.getElementById('inv').addEventListener('click', e => {
+  unlockAndPlay();
   const r = document.getElementById('inv').getBoundingClientRect();
   spawnBurst(e.clientX - r.left, e.clientY - r.top);
 });
